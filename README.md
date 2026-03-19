@@ -130,7 +130,7 @@ This indicates good ranking performance.
 pip install -r requirements.txt
 ```
 
-2. Place the dataset in the project folder
+2. Place the dataset in the project folder (Don't forget to extract from zip)
 
 3. Run the script:
 
