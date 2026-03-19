@@ -4,92 +4,80 @@
 
 This project explores how Generalized Linear Models (GLMs) can be used to model insurance claim frequency.
 
-The main goal is to estimate expected claim frequency per policy while taking into account exposure and key risk factors. The focus is on understanding the modeling process and interpreting results rather than building a highly optimized model.
+The goal is to estimate expected claim frequency per policy while accounting for exposure and risk characteristics. The focus is on understanding the modeling process and interpreting results.
 
 ---
 
 ## Dataset
 
-The dataset contains motor insurance policy-level data with the following key variables:
+The dataset contains motor insurance policy-level data, including:
 
 * **ClaimNb**: Number of claims (target)
-* **Exposure**: Duration of exposure for each policy
-* **Driver and vehicle characteristics**:
+* **Exposure**: Policy exposure duration
+* **Risk factors**:
 
   * Driver age (`DrivAge`)
   * Vehicle age (`VehAge`)
   * Vehicle power (`VehPower`)
   * Bonus-malus score (`BonusMalus`)
-* **Categorical features**:
-
-  * Area, Region
   * Vehicle brand (`VehBrand`)
   * Fuel type (`VehGas`)
-* **Density**: Population density proxy
+  * Area and Region
+  * Population density (`Density`)
 
 ---
 
 ## Exploratory Data Analysis
 
-Below are the distributions of the main numerical features:
-
 ![Numerical Features Distribution](claim_hist.png)
 
 Key observations:
 
-* Claim counts are highly skewed with a large number of zero-claim policies
-* Exposure is concentrated around lower values but varies across policies
-* Density is heavily right-skewed
-* Bonus-malus shows strong clustering around lower values
+* Claim counts are highly skewed with many zero-claim policies
+* Exposure varies significantly across policies
+* Density is strongly right-skewed
+* Bonus-malus shows a clear concentration at lower values
 
 ---
 
 ## Problem Definition
 
-We model claim frequency using a standard insurance formulation:
+We model expected claim frequency as:
 
 E[ClaimNb] = Exposure × λ
 
-Using a log-link GLM:
+Using a GLM with log-link:
 
 log(E[ClaimNb]) = log(Exposure) + Xβ
 
-Here, `log(Exposure)` is used as an offset.
+Where `log(Exposure)` is used as an offset.
 
 ---
 
 ## Modeling Approach
 
-### 1. Poisson GLM
+### Poisson GLM
 
-A Poisson model was first fitted using exposure as an offset.
-
+* Baseline model
 * Simple and interpretable
-* However, it showed systematic overestimation
+* Shows systematic overestimation
 
----
+### Negative Binomial GLM
 
-### 2. Negative Binomial GLM
+* Handles overdispersion
+* Slight improvement over Poisson
+* Calibration still imperfect
 
-To address overdispersion, a Negative Binomial model was tested.
+### Two-Stage Model (Final)
 
-* Slight improvement in fit
-* Calibration issues still remained
+To handle the large number of zero claims:
 
----
-
-### 3. Two-Stage Model (Final Model)
-
-Due to the high number of zero-claim observations, a two-stage approach was used:
-
-* **Stage 1**: Logistic regression to model the probability of having at least one claim
-* **Stage 2**: Poisson GLM to model the number of claims given a claim occurred
+* Stage 1: Logistic regression → probability of having a claim
+* Stage 2: Poisson GLM → number of claims given a claim
 
 Final prediction:
 
 Expected Claims = P(Claim > 0) × E[ClaimNb | Claim > 0]
-
-This approach produced better calibration and more realistic predictions.
 
 ---
 
@@ -97,28 +85,47 @@ This approach produced better calibration and more realistic predictions.
 
 ### Calibration by Area (Final Model)
 
-The two-stage model reduces the overestimation observed in single-stage models and produces more stable results across different regions.
+| Area | Actual | Predicted |
+| ---- | ------ | --------- |
+| A    | 0.0817 | 0.1025    |
+| B    | 0.0883 | 0.1102    |
+| C    | 0.0945 | 0.1190    |
+| D    | 0.1093 | 0.1394    |
+| E    | 0.1223 | 0.1573    |
+| F    | 0.1391 | 0.1576    |
+
+The two-stage model reduces the overestimation observed in single-stage models.
 
 ---
 
 ### Decile Analysis
 
-The model shows clear separation between low-risk and high-risk groups:
+| Decile | Actual | Predicted |
+| ------ | ------ | --------- |
+| 0      | 0.053  | 0.076     |
+| 5      | 0.081  | 0.113     |
+| 9      | 0.196  | 0.310     |
 
 * Claim frequency increases consistently across deciles
-* Higher predicted risk corresponds to higher observed claim frequency
-
-This indicates good ranking performance.
+* Model captures relative risk well
 
 ---
 
 ## Key Findings
 
-* Bonus-malus is the strongest predictor of claim frequency
-* Younger and older drivers tend to have higher risk
-* Density has a positive relationship with claim frequency
-* Significant variation exists across regions
-* Two-stage modeling improves calibration compared to standard GLMs
+* Bonus-malus is the strongest predictor
+* Driver age shows a non-linear effect
+* Density is positively associated with risk
+* Regional differences are significant
+* Two-stage modeling improves calibration
+
+---
+
+## Project Structure
+
+* `glm_model.py` → main script (data loading, modeling, evaluation)
+* `claim_hist.png` → EDA visualization
+* `freMTPL2freq.csv.zip` → dataset (needs to be extracted)
 
 ---
 
@@ -130,16 +137,20 @@ This indicates good ranking performance.
 pip install -r requirements.txt
 ```
 
-2. Place the dataset in the project folder (Don't forget to extract from zip)
-
-3. Run the script:
+2. Extract the dataset:
 
 ```bash
-python insurance_claim_frequency_glm.py
+unzip freMTPL2freq.csv.zip
+```
+
+3. Run the model:
+
+```bash
+python glm_model.py
 ```
 
 ---
 
 ## Notes
 
-This project is intended as a learning-oriented implementation of GLMs in an insurance context. The emphasis is on understanding modeling choices and interpreting results rather than building a production-ready model.
+This is a learning-oriented project focused on applying GLMs in an insurance context. The emphasis is on understanding modeling choices rather than building a production system.
